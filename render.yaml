@@ -10,3 +10,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.13.0
+      - key: PIONEER_API_KEY
+        sync: false
+      - key: PIONEER_MODEL
+        value: claude-haiku-4.5
+      - key: PIONEER_BASE_URL
+        value: https://api.pioneer.ai/v1

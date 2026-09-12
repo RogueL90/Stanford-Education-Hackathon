@@ -9,7 +9,7 @@ export interface StoredStudentResult extends Evaluation {
   selectedAnswerLabel: string
   explanation: string
   createdAt: string
-  source: 'ai' | 'demo'
+  source: 'pioneer' | 'demo'
 }
 
 const resultsFile = process.env.RESULTS_FILE || path.join(process.cwd(), 'data', 'results.json')

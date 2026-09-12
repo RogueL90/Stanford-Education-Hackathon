@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   evaluateDemo,
+  evaluateWithAI,
   evaluationRequestSchema,
   evaluationSubmissionSchema,
   type EvaluationRequest,
@@ -26,6 +27,8 @@ test('wrong answer can still show strong recall', () => {
   })
   assert.equal(result.answerCorrect, false)
   assert.equal(result.comprehension, 'strong')
+  assert.equal(result.skills.usesStoryEvidence, true)
+  assert.ok(result.strengths.length > 0)
 })
 
 test('correct answer with a vague explanation is weak', () => {
@@ -120,4 +123,58 @@ test('requires a student name when saving a submission', () => {
     evaluationSubmissionSchema.safeParse({ ...base, studentName: '   ' }).success,
     false,
   )
+})
+
+test('uses Pioneer Anthropic-compatible messages for live analysis', async () => {
+  const originalFetch = globalThis.fetch
+  const originalKey = process.env.PIONEER_API_KEY
+  const originalModel = process.env.PIONEER_MODEL
+  process.env.PIONEER_API_KEY = 'test-key'
+  process.env.PIONEER_MODEL = 'claude-haiku-4.5'
+
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), 'https://api.pioneer.ai/v1/messages')
+    const headers = new Headers(init?.headers)
+    assert.equal(headers.get('X-API-Key'), 'test-key')
+
+    const requestBody = JSON.parse(String(init?.body)) as { model: string }
+    assert.equal(requestBody.model, 'claude-haiku-4.5')
+
+    return new Response(JSON.stringify({
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          answerCorrect: true,
+          comprehension: 'strong',
+          reason: 'You explained that the brick house stayed standing and kept the pigs safe.',
+          strengths: ['You used the brick house as story evidence.'],
+          misconceptions: [],
+          nextStep: 'Keep connecting story events to the lesson.',
+          skills: {
+            usesStoryEvidence: true,
+            connectsCauseAndEffect: true,
+            identifiesCentralLesson: true,
+          },
+        }),
+      }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  try {
+    const result = await evaluateWithAI({
+      ...base,
+      question: 'What did the Three Little Pigs learn at the end of the story?',
+      selectedAnswer: 'preparation',
+      expectedCorrectAnswer: 'preparation',
+      explanation: 'The brick house did not fall, so taking time kept the pigs safe.',
+    })
+    assert.equal(result.comprehension, 'strong')
+    assert.equal(result.skills.connectsCauseAndEffect, true)
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalKey === undefined) delete process.env.PIONEER_API_KEY
+    else process.env.PIONEER_API_KEY = originalKey
+    if (originalModel === undefined) delete process.env.PIONEER_MODEL
+    else process.env.PIONEER_MODEL = originalModel
+  }
 })

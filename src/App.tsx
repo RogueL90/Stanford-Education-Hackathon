@@ -36,6 +36,26 @@ function TeacherDashboard() {
     return () => window.clearInterval(refreshTimer)
   }, [loadResults])
 
+  const totalResponses = results.length
+  const percentage = (count: number) => totalResponses ? Math.round((count / totalResponses) * 100) : 0
+  const strongCount = results.filter(({ comprehension }) => comprehension === 'strong').length
+  const correctCount = results.filter(({ answerCorrect }) => answerCorrect).length
+  const supportCount = results.filter(({ comprehension }) => comprehension !== 'strong').length
+  const skillSummary = [
+    {
+      label: 'Used story evidence',
+      count: results.filter((item) => item.skills?.usesStoryEvidence).length,
+    },
+    {
+      label: 'Connected cause and effect',
+      count: results.filter((item) => item.skills?.connectsCauseAndEffect).length,
+    },
+    {
+      label: 'Identified the central lesson',
+      count: results.filter((item) => item.skills?.identifiesCentralLesson).length,
+    },
+  ]
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -61,43 +81,89 @@ function TeacherDashboard() {
           ) : results.length === 0 ? (
             <p className="dashboard-message">No responses yet.</p>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Result</th>
-                    <th>Answer</th>
-                    <th>Explanation</th>
-                    <th>Submitted</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((studentResult) => (
-                    <tr key={studentResult.id}>
-                      <td><strong>{studentResult.studentName}</strong></td>
-                      <td>
-                        <span className={`result-pill result-pill--${studentResult.comprehension}`}>
-                          {studentResult.comprehension === 'strong'
-                            ? 'Understood'
-                            : studentResult.comprehension === 'partial'
-                              ? 'Almost there'
-                              : 'Needs review'}
-                        </span>
-                      </td>
-                      <td>{studentResult.selectedAnswerLabel}</td>
-                      <td className="explanation-cell">{studentResult.explanation || '—'}</td>
-                      <td>{new Date(studentResult.createdAt).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}</td>
+            <>
+              <section className="class-overview" aria-labelledby="class-overview-title">
+                <h2 id="class-overview-title">Class overview</h2>
+                <div className="summary-cards">
+                  <div className="summary-card">
+                    <strong>{totalResponses}</strong>
+                    <span>Responses</span>
+                  </div>
+                  <div className="summary-card">
+                    <strong>{percentage(strongCount)}%</strong>
+                    <span>Strong understanding</span>
+                  </div>
+                  <div className="summary-card">
+                    <strong>{percentage(correctCount)}%</strong>
+                    <span>Correct answer</span>
+                  </div>
+                  <div className="summary-card">
+                    <strong>{supportCount}</strong>
+                    <span>Need support</span>
+                  </div>
+                </div>
+
+                <div className="skill-breakdown">
+                  {skillSummary.map((skill) => {
+                    const skillPercentage = percentage(skill.count)
+                    return (
+                      <div className="skill-row" key={skill.label}>
+                        <div className="skill-row__label">
+                          <span>{skill.label}</span>
+                          <strong>{skillPercentage}%</strong>
+                        </div>
+                        <div className="skill-track" aria-hidden="true">
+                          <span style={{ width: `${skillPercentage}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Understanding</th>
+                      <th>Answer</th>
+                      <th>AI analysis</th>
+                      <th>Student explanation</th>
+                      <th>Submitted</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {results.map((studentResult) => (
+                      <tr key={studentResult.id}>
+                        <td><strong>{studentResult.studentName}</strong></td>
+                        <td>
+                          <span className={`result-pill result-pill--${studentResult.comprehension}`}>
+                            {studentResult.comprehension === 'strong'
+                              ? 'Understood'
+                              : studentResult.comprehension === 'partial'
+                                ? 'Almost there'
+                                : 'Needs review'}
+                          </span>
+                        </td>
+                        <td>{studentResult.selectedAnswerLabel}</td>
+                        <td className="analysis-cell">
+                          <p>{studentResult.reason}</p>
+                          {studentResult.nextStep && <small>Next: {studentResult.nextStep}</small>}
+                        </td>
+                        <td className="explanation-cell">{studentResult.explanation || '—'}</td>
+                        <td>{new Date(studentResult.createdAt).toLocaleString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </main>
@@ -285,9 +351,50 @@ function StudentQuiz() {
               </h1>
             </div>
 
-            <div className="question-result__details">
-              <p>{result?.reason}</p>
-            </div>
+            {result && (
+              <>
+                <div className="result-comparison">
+                  <div className="result-item">
+                    <span className="result-label">Answer choice</span>
+                    <strong className={result.answerCorrect ? 'status-correct' : 'status-incorrect'}>
+                      <span className="status-icon" aria-hidden="true">
+                        {result.answerCorrect ? '✓' : '×'}
+                      </span>
+                      {result.answerCorrect ? 'Correct' : 'Not quite'}
+                    </strong>
+                  </div>
+                  <div className="result-item result-item--emphasis">
+                    <span className="result-label">Understanding</span>
+                    <strong className={`status-${result.comprehension}`}>
+                      {result.comprehension === 'strong'
+                        ? 'Strong'
+                        : result.comprehension === 'partial'
+                          ? 'Developing'
+                          : 'Needs support'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="reason-section">
+                  <h2>Your analysis</h2>
+                  <p>{result.reason}</p>
+
+                  {result.strengths.length > 0 && (
+                    <div className="feedback-block">
+                      <h3>What you showed</h3>
+                      <ul>
+                        {result.strengths.map((strength) => <li key={strength}>{strength}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="next-step">
+                    <strong>Try next</strong>
+                    <span>{result.nextStep}</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="result-actions">
               <button className="primary-button" type="button" onClick={startOver}>Next student</button>

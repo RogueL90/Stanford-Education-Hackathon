@@ -1,10 +1,20 @@
 export type ComprehensionLevel = 'strong' | 'partial' | 'weak'
 
+export interface ComprehensionSkills {
+  usesStoryEvidence: boolean
+  connectsCauseAndEffect: boolean
+  identifiesCentralLesson: boolean
+}
+
 export interface EvaluationResult {
   answerCorrect: boolean
   comprehension: ComprehensionLevel
   reason: string
-  source: 'ai' | 'demo'
+  strengths: string[]
+  misconceptions: string[]
+  nextStep: string
+  skills: ComprehensionSkills
+  source: 'pioneer' | 'demo'
 }
 
 export interface EvaluationRequest {

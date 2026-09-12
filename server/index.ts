@@ -3,7 +3,7 @@ import express from 'express'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { evaluateDemo, evaluationSubmissionSchema, evaluateWithAI, usesAI } from './evaluate.js'
+import { evaluateDemo, evaluationSubmissionSchema, evaluateWithAI, usesPioneer } from './evaluate.js'
 import type { Evaluation } from './evaluate.js'
 import { listResults, saveResult } from './result-store.js'
 
@@ -17,7 +17,7 @@ app.disable('x-powered-by')
 app.use(express.json({ limit: '32kb' }))
 
 app.get('/api/health', (_request, response) => {
-  response.json({ status: 'ok' })
+  response.json({ status: 'ok', analysis: usesPioneer() ? 'pioneer' : 'demo' })
 })
 
 app.get('/api/results', (_request, response) => {
@@ -33,13 +33,13 @@ app.post('/api/evaluate', async (request, response) => {
 
   const { studentName, ...evaluationInput } = parsed.data
   let evaluation: Evaluation
-  let source: 'ai' | 'demo'
+  let source: 'pioneer' | 'demo'
 
   try {
     evaluation = await evaluateWithAI(evaluationInput)
-    source = usesAI() ? 'ai' : 'demo'
+    source = usesPioneer() ? 'pioneer' : 'demo'
   } catch (error) {
-    console.error('AI evaluation failed; using demo evaluator.', error)
+    console.error('Pioneer evaluation failed; using demo evaluator.', error)
     evaluation = evaluateDemo(evaluationInput)
     source = 'demo'
   }
