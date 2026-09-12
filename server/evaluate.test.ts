@@ -130,7 +130,7 @@ test('uses Pioneer Anthropic-compatible messages for live analysis', async () =>
   const originalKey = process.env.PIONEER_API_KEY
   const originalModel = process.env.PIONEER_MODEL
   process.env.PIONEER_API_KEY = 'test-key'
-  process.env.PIONEER_MODEL = 'claude-haiku-4.5'
+  process.env.PIONEER_MODEL = 'claude-haiku-4-5'
 
   globalThis.fetch = async (input, init) => {
     assert.equal(String(input), 'https://api.pioneer.ai/v1/messages')
@@ -138,7 +138,7 @@ test('uses Pioneer Anthropic-compatible messages for live analysis', async () =>
     assert.equal(headers.get('X-API-Key'), 'test-key')
 
     const requestBody = JSON.parse(String(init?.body)) as { model: string }
-    assert.equal(requestBody.model, 'claude-haiku-4.5')
+    assert.equal(requestBody.model, 'claude-haiku-4-5')
 
     return new Response(JSON.stringify({
       content: [{

@@ -254,7 +254,7 @@ export async function evaluateWithAI(input: EvaluationRequest): Promise<Evaluati
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: process.env.PIONEER_MODEL || 'claude-haiku-4.5',
+      model: process.env.PIONEER_MODEL || 'claude-haiku-4-5',
       max_tokens: 900,
       temperature: 0,
       system: SYSTEM_PROMPT,
