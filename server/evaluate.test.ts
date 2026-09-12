@@ -178,3 +178,44 @@ test('uses Pioneer Anthropic-compatible messages for live analysis', async () =>
     else process.env.PIONEER_MODEL = originalModel
   }
 })
+test('evaluateWithAI gracefully handles Pioneer response missing skills field', async () => {
+  const originalFetch = globalThis.fetch
+  const originalKey = process.env.PIONEER_API_KEY
+  process.env.PIONEER_API_KEY = 'test-key'
+
+  globalThis.fetch = async () => {
+    return new Response(
+      JSON.stringify({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              answerCorrect: true,
+              comprehension: 'strong',
+              reason: 'Good explanation.',
+              strengths: ['Identified main idea.'],
+              misconceptions: [],
+              nextStep: 'Continue reading.',
+            }),
+          },
+        ],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  try {
+    const result = await evaluateWithAI({
+      ...base,
+      selectedAnswer: 'purple-mist',
+      expectedCorrectAnswer: 'purple-mist',
+      explanation: 'He was becoming young again in a purple mist.',
+    })
+    assert.equal(result.comprehension, 'strong')
+    assert.equal(result.skills.usesStoryEvidence, true)
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalKey === undefined) delete process.env.PIONEER_API_KEY
+    else process.env.PIONEER_API_KEY = originalKey
+  }
+})

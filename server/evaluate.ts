@@ -13,17 +13,23 @@ export const evaluationSubmissionSchema = evaluationRequestSchema.extend({
   studentName: z.string().trim().min(1).max(80),
 })
 
+export const skillsSchema = z.object({
+  usesStoryEvidence: z.boolean().default(false),
+  connectsCauseAndEffect: z.boolean().default(false),
+  identifiesCentralLesson: z.boolean().default(false),
+})
+
 export const evaluationSchema = z.object({
-  answerCorrect: z.boolean(),
+  answerCorrect: z.boolean().default(false),
   comprehension: z.enum(['strong', 'partial', 'weak']),
-  reason: z.string().min(1).max(700),
-  strengths: z.array(z.string().min(1).max(180)).max(3),
-  misconceptions: z.array(z.string().min(1).max(180)).max(3),
-  nextStep: z.string().min(1).max(300),
-  skills: z.object({
-    usesStoryEvidence: z.boolean(),
-    connectsCauseAndEffect: z.boolean(),
-    identifiesCentralLesson: z.boolean(),
+  reason: z.string().min(1),
+  strengths: z.array(z.string().min(1)).default([]),
+  misconceptions: z.array(z.string().min(1)).default([]),
+  nextStep: z.string().default(''),
+  skills: skillsSchema.default({
+    usesStoryEvidence: false,
+    connectsCauseAndEffect: false,
+    identifiesCentralLesson: false,
   }),
 })
 
@@ -60,7 +66,7 @@ Rules:
 - Set skills.identifiesCentralLesson to true only when the explanation communicates the story's main lesson, even if its wording differs from the answer choice.
 - Set answerCorrect solely by comparing selectedAnswer with expectedCorrectAnswer.`
 
-const OUTPUT_INSTRUCTIONS = `Return only one valid JSON object with exactly this shape:
+const OUTPUT_INSTRUCTIONS = `Return only one valid JSON object with exactly this shape (always include all fields including the skills object):
 {
   "answerCorrect": boolean,
   "comprehension": "strong" | "partial" | "weak",
@@ -285,10 +291,27 @@ export async function evaluateWithAI(input: EvaluationRequest): Promise<Evaluati
   const lastBrace = cleanedText.lastIndexOf('}')
   if (firstBrace === -1 || lastBrace === -1) throw new Error('Pioneer returned invalid analysis JSON')
   const jsonText = cleanedText.slice(firstBrace, lastBrace + 1)
-  const parsed = evaluationSchema.parse(JSON.parse(jsonText))
+  const rawParsed = JSON.parse(jsonText) as Record<string, any>
+  const parsed = evaluationSchema.parse(rawParsed)
+  const answerCorrect = input.selectedAnswer === input.expectedCorrectAnswer
+  const skills = {
+    usesStoryEvidence:
+      typeof rawParsed.skills?.usesStoryEvidence === 'boolean'
+        ? rawParsed.skills.usesStoryEvidence
+        : parsed.comprehension === 'strong',
+    connectsCauseAndEffect:
+      typeof rawParsed.skills?.connectsCauseAndEffect === 'boolean'
+        ? rawParsed.skills.connectsCauseAndEffect
+        : parsed.comprehension === 'strong',
+    identifiesCentralLesson:
+      typeof rawParsed.skills?.identifiesCentralLesson === 'boolean'
+        ? rawParsed.skills.identifiesCentralLesson
+        : parsed.comprehension === 'strong' || answerCorrect,
+  }
   return {
     ...parsed,
-    answerCorrect: input.selectedAnswer === input.expectedCorrectAnswer,
+    skills,
+    answerCorrect,
   }
 }
 
