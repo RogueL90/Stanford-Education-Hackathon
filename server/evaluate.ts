@@ -37,6 +37,7 @@ Rules:
 - Use "strong" when the explanation accurately connects specific relevant details and the central reasoning.
 - Use "partial" when it shows some relevant understanding but misses or confuses an important connection.
 - Use "weak" when it is vague, unsupported, substantially contradicted by the text, or shows little relevant understanding.
+- If no written explanation is provided, treat the multiple-choice response as the available evidence: use "strong" for a correct answer and "weak" for an incorrect answer.
 - Keep the reason concise, specific, supportive, and addressed directly to the student.
 - Set answerCorrect solely by comparing selectedAnswer with expectedCorrectAnswer.`
 
@@ -123,6 +124,16 @@ const demoRubrics: DemoRubric[] = [
 export function evaluateDemo(input: EvaluationRequest): Evaluation {
   const explanation = input.explanation.toLowerCase()
   const answerCorrect = input.selectedAnswer === input.expectedCorrectAnswer
+
+  if (!explanation.trim()) {
+    return {
+      answerCorrect,
+      comprehension: answerCorrect ? 'strong' : 'weak',
+      reason: answerCorrect
+        ? 'You recognized that careful work and preparation kept the pigs safe from the wolf.'
+        : 'The brick house shows that hard work and preparation can protect you from trouble.',
+    }
+  }
 
   const rubric = demoRubrics.find(({ questionIncludes }) =>
     input.question.toLowerCase().includes(questionIncludes),

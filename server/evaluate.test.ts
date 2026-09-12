@@ -88,3 +88,16 @@ test('recognizes evidence for each quiz question', () => {
 test('accepts an empty explanation for direct-recall questions', () => {
   assert.equal(evaluationRequestSchema.safeParse({ ...base, explanation: '' }).success, true)
 })
+
+test('uses a multiple-choice answer when no explanation is requested', () => {
+  const result = evaluateDemo({
+    ...base,
+    question: 'What did the Three Little Pigs learn at the end of the story?',
+    selectedAnswer: 'preparation',
+    expectedCorrectAnswer: 'preparation',
+    explanation: '',
+  })
+
+  assert.equal(result.answerCorrect, true)
+  assert.equal(result.comprehension, 'strong')
+})
