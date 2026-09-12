@@ -1,47 +1,96 @@
 export const quiz = {
-  title: 'Reading Comprehension Check',
-  passageTitle: 'A Walk Around the Block',
-  passage: [
-    `Maya found her brother Leo in the kitchen, searching through a stack of mail. Their grandmother's birthday card was missing, and Leo insisted Maya had moved it. Maya knew she had left it by the fruit bowl, but the more she tried to explain, the louder their argument became.`,
-    `Maya grabbed her jacket and stepped outside. She was not going to meet anyone. She walked toward the empty park at the end of the block because she needed time to cool down before she said something she would regret.`,
-    `When her mother called, Maya said she was returning a library book. It was not true, but she did not want her mother pulled into the argument or blaming Leo before the two of them had a chance to sort it out.`,
+  title: 'Tikki Tikki Tembo Comprehension Check',
+  instructions: 'Choose the best answer. Then explain what you remember from the story.',
+  referenceText: `In the story, the older brother has a very long honorable name, while Chang's short name means little or nothing. Their mother warns the boys not to play near the well. When each brother falls in, getting help is complicated by the older brother's long name. The Old Man uses his ladder to rescue them. When Chang wakes him, the Old Man has been dreaming that he is floating through purple mist, becoming young again, and seeing glittering gateways and jeweled blossoms. After the accidents, the boys learn that they should have listened to their mother's warning.`,
+  questions: [
+    {
+      id: 'moral',
+      prompt: 'What is the moral of Tikki Tikki Tembo?',
+      choices: [
+        { id: 'kind', label: 'To always be kind.' },
+        { id: 'slow', label: 'Slow and steady wins the race.' },
+        { id: 'short-names', label: "You shouldn't give your children long names." },
+        { id: 'ladder', label: 'You should always sleep with a ladder.' },
+      ],
+      correctAnswerId: 'short-names',
+      explanationPrompt: 'What in the story led you to your answer?',
+    },
+    {
+      id: 'challenge',
+      prompt: 'What was the biggest challenge for Chang?',
+      choices: [
+        { id: 'long-name', label: 'Getting help for his brother because he had to say his long name.' },
+        { id: 'neighborhood', label: 'Running all over the neighborhood.' },
+        { id: 'attention', label: "Getting his mother's attention." },
+        { id: 'short-name', label: 'His short name.' },
+      ],
+      correctAnswerId: 'long-name',
+      explanationPrompt: 'What in the story led you to your answer?',
+    },
+    {
+      id: 'mother-response',
+      prompt: 'How does Chang’s mother respond to him when he asks for help?',
+      choices: [
+        { id: 'cannot-hear', label: '“I cannot hear you.”' },
+        { id: 'cold-water', label: '“The water is so cold.”' },
+        { id: 'long-name', label: '“Your brother has a long name.”' },
+        { id: 'chores', label: '“Did you do your chores?”' },
+      ],
+      correctAnswerId: 'cannot-hear',
+      explanationPrompt: 'What do you remember about this part of the story?',
+    },
+    {
+      id: 'old-man',
+      prompt: 'Why do both boys have to go ask the Old Man for help?',
+      choices: [
+        { id: 'strength', label: 'They need his super-human strength.' },
+        { id: 'wise', label: 'He is wise.' },
+        { id: 'mother', label: 'Their mother needs help.' },
+        { id: 'ladder', label: 'He has the ladder.' },
+      ],
+      correctAnswerId: 'ladder',
+      explanationPrompt: 'Why was the Old Man important in this situation?',
+    },
+    {
+      id: 'chang-name',
+      prompt: 'What does Chang’s name mean?',
+      choices: [
+        { id: 'honorable', label: 'Most honorable' },
+        { id: 'nothing', label: 'Little or nothing' },
+        { id: 'younger', label: 'Younger child' },
+        { id: 'foolish', label: 'Foolish boy' },
+      ],
+      correctAnswerId: 'nothing',
+      explanationPrompt: "What do you remember about how the brothers' names were described?",
+    },
+    {
+      id: 'lesson',
+      prompt: 'What lesson did Chang and Tikki Tikki learn after their accident?',
+      choices: [
+        { id: 'cold-water', label: 'Water in the well is cold.' },
+        { id: 'wise', label: 'The Old Man is wise.' },
+        { id: 'listen', label: 'They should have listened to their mother’s advice.' },
+        { id: 'ladder-fun', label: 'Ladders are fun to climb.' },
+      ],
+      correctAnswerId: 'listen',
+      explanationPrompt: 'What happened in the story that supports your answer?',
+    },
+    {
+      id: 'dream',
+      prompt: 'What was the Old Man dreaming about when Chang woke him up?',
+      choices: [
+        { id: 'treasure', label: 'Finding a treasure hidden inside the well.' },
+        {
+          id: 'purple-mist',
+          label: 'Floating into a purple mist and becoming young again, surrounded by glittering gateways and jeweled blossoms.',
+        },
+        { id: 'clouds', label: 'Climbing a ladder into the clouds.' },
+        { id: 'playing', label: 'Playing with Chang and Tikki Tikki Tembo when they were younger.' },
+      ],
+      correctAnswerId: 'purple-mist',
+      explanationPrompt: "What details from the Old Man's description do you remember?",
+    },
   ],
-  question: 'Why does Maya leave the house after talking to her brother?',
-  choices: [
-    { id: 'friend', label: 'She wants to meet her friend.' },
-    { id: 'space', label: 'She needs space after their argument.' },
-    { id: 'mother', label: 'Her mother asks her to leave.' },
-    { id: 'library', label: 'She needs to return a library book.' },
-  ],
-  correctAnswerId: 'space',
 } as const
 
-export type ChoiceId = (typeof quiz.choices)[number]['id']
-
-export const demoResponses: Array<{
-  label: string
-  description: string
-  answerId: ChoiceId
-  explanation: string
-}> = [
-  {
-    label: 'Wrong answer, strong explanation',
-    description: 'Shows why correctness and understanding are different.',
-    answerId: 'friend',
-    explanation:
-      "Maya leaves right after the argument with Leo and walks to the park to cool down before she says something she'll regret. She also lies about the library book because she doesn't want her mom pulled into their argument.",
-  },
-  {
-    label: 'Correct answer, weak explanation',
-    description: 'The answer is right, but the reasoning is too vague.',
-    answerId: 'space',
-    explanation: 'Because she was mad.',
-  },
-  {
-    label: 'Correct answer, strong explanation',
-    description: 'Both the answer and the reasoning show understanding.',
-    answerId: 'space',
-    explanation:
-      "The argument with Leo was getting louder, so Maya left to cool down before saying something she would regret. Her walk gave her space, and she wanted to resolve the problem with Leo without involving her mom.",
-  },
-]
+export type QuestionId = (typeof quiz.questions)[number]['id']

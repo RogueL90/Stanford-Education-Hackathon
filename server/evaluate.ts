@@ -55,35 +55,94 @@ function hasAny(text: string, words: string[]) {
   return words.some((word) => text.includes(word))
 }
 
+type DemoRubric = {
+  questionIncludes: string
+  evidenceGroups: string[][]
+  strongThreshold: number
+}
+
+const demoRubrics: DemoRubric[] = [
+  {
+    questionIncludes: 'moral of tikki tikki tembo',
+    evidenceGroups: [
+      ['long name', 'long names', 'say his name', 'saying his name'],
+      ['delay', 'too long', 'rescue', 'save him', 'get help', 'well'],
+      ['short name', 'short names'],
+    ],
+    strongThreshold: 2,
+  },
+  {
+    questionIncludes: 'biggest challenge for chang',
+    evidenceGroups: [
+      ['long name', 'whole name', 'say his name', 'saying his name'],
+      ['help', 'rescue', 'save', 'old man'],
+      ['brother', 'tikki'],
+    ],
+    strongThreshold: 2,
+  },
+  {
+    questionIncludes: 'mother respond',
+    evidenceGroups: [['cannot hear', "can't hear", 'could not hear', "couldn't hear"]],
+    strongThreshold: 1,
+  },
+  {
+    questionIncludes: 'old man for help',
+    evidenceGroups: [['ladder']],
+    strongThreshold: 1,
+  },
+  {
+    questionIncludes: 'chang’s name mean',
+    evidenceGroups: [
+      ['little or nothing', 'means little', 'meant little', 'means nothing', 'meant nothing'],
+      ['short name', 'younger brother'],
+    ],
+    strongThreshold: 1,
+  },
+  {
+    questionIncludes: 'lesson did chang',
+    evidenceGroups: [
+      ['listen', 'listened'],
+      ['mother', 'mom'],
+      ['advice', 'warned', 'warning', 'stay away', 'well'],
+    ],
+    strongThreshold: 2,
+  },
+  {
+    questionIncludes: 'old man dreaming',
+    evidenceGroups: [
+      ['purple mist', 'purple'],
+      ['young again', 'becoming young', 'young'],
+      ['glittering gateway', 'gateway', 'gate'],
+      ['jeweled blossom', 'blossom', 'flower', 'jewel'],
+      ['floating', 'float'],
+    ],
+    strongThreshold: 2,
+  },
+]
+
 export function evaluateDemo(input: EvaluationRequest): Evaluation {
   const explanation = input.explanation.toLowerCase()
   const answerCorrect = input.selectedAnswer === input.expectedCorrectAnswer
 
-  const evidence = [
-    hasAny(explanation, ['argument', 'argue', 'fight', 'leo', 'brother']),
-    hasAny(explanation, ['cool down', 'calm down', 'space', 'regret', 'getting louder']),
-    hasAny(explanation, ['mom', 'mother']) && hasAny(explanation, ['involve', 'involved', 'pulled', 'blame', 'between them']),
-    hasAny(explanation, ['park', 'library']) && hasAny(explanation, ['lie', 'lied', 'not true', "wasn't true"]),
-  ].filter(Boolean).length
-
+  const rubric = demoRubrics.find(({ questionIncludes }) =>
+    input.question.toLowerCase().includes(questionIncludes),
+  )
+  const evidence = rubric?.evidenceGroups.filter((terms) => hasAny(explanation, terms)).length ?? 0
+  const strongThreshold = rubric?.strongThreshold ?? 2
   const wordCount = explanation.trim().split(/\s+/).filter(Boolean).length
-  const contradictsText =
-    (hasAny(explanation, ['meet her friend', 'meeting her friend']) && evidence < 2) ||
-    (hasAny(explanation, ['return the book', 'returning the book']) && !hasAny(explanation, ['lie', 'lied', 'not true'])) ||
-    hasAny(explanation, ['mother made', 'mom made', 'told her to leave'])
 
   let comprehension: Evaluation['comprehension']
-  if (evidence >= 2 && !contradictsText) comprehension = 'strong'
-  else if ((evidence >= 1 || wordCount >= 12) && !contradictsText) comprehension = 'partial'
+  if (evidence >= strongThreshold) comprehension = 'strong'
+  else if (evidence >= 1 || wordCount >= 12) comprehension = 'partial'
   else comprehension = 'weak'
 
   const reasons = {
     strong:
-      'Your explanation uses specific details from the passage and connects the argument to Maya’s need to cool down. It shows that you understood both the sequence of events and her motivation.',
+      'Your explanation recalls specific details from this part of the story and connects them clearly to your answer.',
     partial:
-      'Your explanation identifies part of Maya’s reaction, but it does not yet connect enough specific details from the passage to fully explain why she left.',
+      'Your explanation remembers a relevant part of the story. Add one more specific detail or explain how that detail supports your answer.',
     weak:
-      'Your explanation does not give enough specific evidence from the passage to show why Maya left. Try connecting the argument to what Maya hoped would happen by going outside.',
+      'Your explanation does not yet include a specific detail from this part of the story. Try writing what happened or what you remember hearing.',
   }
 
   return { answerCorrect, comprehension, reason: reasons[comprehension] }

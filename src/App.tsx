@@ -1,60 +1,82 @@
-import { FormEvent, useRef, useState } from 'react'
-import { demoResponses, quiz, type ChoiceId } from './content'
+import { FormEvent, useState } from 'react'
+import { quiz, type QuestionId } from './content'
 import type { EvaluationRequest, EvaluationResult } from './types'
 
 type View = 'quiz' | 'result'
+type ResponseState = Record<QuestionId, { selectedAnswer: string; explanation: string }>
+type QuestionResult = { questionId: QuestionId; evaluation: EvaluationResult }
+
+function emptyResponses(): ResponseState {
+  return Object.fromEntries(
+    quiz.questions.map((question) => [question.id, { selectedAnswer: '', explanation: '' }]),
+  ) as ResponseState
+}
 
 function App() {
-  const [selectedAnswer, setSelectedAnswer] = useState<ChoiceId | ''>('')
-  const [explanation, setExplanation] = useState('')
-  const [result, setResult] = useState<EvaluationResult | null>(null)
+  const [responses, setResponses] = useState<ResponseState>(emptyResponses)
+  const [results, setResults] = useState<QuestionResult[]>([])
   const [view, setView] = useState<View>('quiz')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [showDemos, setShowDemos] = useState(false)
-  const explanationRef = useRef<HTMLTextAreaElement>(null)
 
-  const canSubmit = selectedAnswer !== '' && explanation.trim().length > 0
+  const canSubmit = quiz.questions.every((question) => {
+    const response = responses[question.id]
+    return response.selectedAnswer !== '' && response.explanation.trim().length > 0
+  })
 
-  function applyDemo(index: number) {
-    const demo = demoResponses[index]
-    setSelectedAnswer(demo.answerId)
-    setExplanation(demo.explanation)
-    setShowDemos(false)
-    setError('')
-    window.setTimeout(() => explanationRef.current?.focus(), 0)
+  function chooseAnswer(questionId: QuestionId, selectedAnswer: string) {
+    setResponses((current) => ({
+      ...current,
+      [questionId]: { ...current[questionId], selectedAnswer },
+    }))
+  }
+
+  function writeExplanation(questionId: QuestionId, explanation: string) {
+    setResponses((current) => ({
+      ...current,
+      [questionId]: { ...current[questionId], explanation },
+    }))
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!canSubmit || !selectedAnswer) return
+    if (!canSubmit) return
 
     setSubmitting(true)
     setError('')
 
-    const payload: EvaluationRequest = {
-      passage: quiz.passage.join('\n\n'),
-      question: quiz.question,
-      answerChoices: quiz.choices.map(({ id, label }) => ({ id, label })),
-      expectedCorrectAnswer: quiz.correctAnswerId,
-      selectedAnswer,
-      explanation: explanation.trim(),
-    }
-
     try {
-      const response = await fetch('/api/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const evaluated = await Promise.all(
+        quiz.questions.map(async (question) => {
+          const studentResponse = responses[question.id]
+          const payload: EvaluationRequest = {
+            passage: quiz.referenceText,
+            question: question.prompt,
+            answerChoices: question.choices.map(({ id, label }) => ({ id, label })),
+            expectedCorrectAnswer: question.correctAnswerId,
+            selectedAnswer: studentResponse.selectedAnswer,
+            explanation: studentResponse.explanation.trim(),
+          }
 
-      if (!response.ok) throw new Error('Evaluation failed')
-      const evaluation = (await response.json()) as EvaluationResult
-      setResult(evaluation)
+          const response = await fetch('/api/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+
+          if (!response.ok) throw new Error('Evaluation failed')
+          return {
+            questionId: question.id,
+            evaluation: (await response.json()) as EvaluationResult,
+          }
+        }),
+      )
+
+      setResults(evaluated)
       setView('result')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {
-      setError('We could not check this response. Please try again.')
+      setError('We could not check these responses. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -62,9 +84,8 @@ function App() {
 
   function startOver() {
     setView('quiz')
-    setResult(null)
-    setSelectedAnswer('')
-    setExplanation('')
+    setResults([])
+    setResponses(emptyResponses())
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -82,145 +103,126 @@ function App() {
         {view === 'quiz' ? (
           <form className="assessment" onSubmit={submit}>
             <section className="title-block" aria-labelledby="page-title">
-              <p className="eyebrow">English · Grade 7</p>
+              <p className="eyebrow">Story quiz · 7 questions</p>
               <h1 id="page-title">{quiz.title}</h1>
-              <p>Read the passage, choose the best answer, and explain your thinking.</p>
+              <p>{quiz.instructions}</p>
             </section>
 
-            <section className="form-section passage-section" aria-labelledby="passage-title">
-              <p className="section-label">Reading passage</p>
-              <h2 id="passage-title">{quiz.passageTitle}</h2>
-              <div className="passage-copy">
-                {quiz.passage.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-            </section>
+            {quiz.questions.map((question, index) => {
+              const studentResponse = responses[question.id]
+              const helpId = `${question.id}-help`
 
-            <section className="form-section question-section" aria-labelledby="question-title">
-              <fieldset>
-                <legend id="question-title">
-                  <span className="question-number">1.</span> {quiz.question}
-                  <span className="required-mark" aria-label="required">*</span>
-                </legend>
+              return (
+                <section className="form-section question-section" aria-labelledby={`${question.id}-title`} key={question.id}>
+                  <fieldset>
+                    <legend id={`${question.id}-title`}>
+                      <span className="question-number">{index + 1}.</span> {question.prompt}
+                      <span className="required-mark" aria-label="required">*</span>
+                    </legend>
 
-                <div className="choices">
-                  {quiz.choices.map((choice) => (
-                    <label className="choice" key={choice.id}>
-                      <input
-                        type="radio"
-                        name="answer"
-                        value={choice.id}
-                        checked={selectedAnswer === choice.id}
-                        onChange={() => setSelectedAnswer(choice.id)}
-                      />
-                      <span>{choice.label}</span>
+                    <div className="choices">
+                      {question.choices.map((choice) => (
+                        <label className="choice" key={choice.id}>
+                          <input
+                            type="radio"
+                            name={`answer-${question.id}`}
+                            value={choice.id}
+                            checked={studentResponse.selectedAnswer === choice.id}
+                            onChange={() => chooseAnswer(question.id, choice.id)}
+                          />
+                          <span>{choice.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <div className="explanation-field">
+                    <label htmlFor={`${question.id}-explanation`}>
+                      Explain your thinking
+                      <span className="required-mark" aria-label="required">*</span>
                     </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <div className="explanation-field">
-                <label htmlFor="explanation">
-                  Explain your thinking
-                  <span className="required-mark" aria-label="required">*</span>
-                </label>
-                <p id="explanation-help">Explain what in the reading led you to your answer.</p>
-                <textarea
-                  ref={explanationRef}
-                  id="explanation"
-                  rows={5}
-                  value={explanation}
-                  onChange={(event) => setExplanation(event.target.value)}
-                  aria-describedby="explanation-help"
-                  placeholder="Write your explanation here"
-                  required
-                />
-              </div>
-            </section>
+                    <p id={helpId}>{question.explanationPrompt}</p>
+                    <textarea
+                      id={`${question.id}-explanation`}
+                      rows={4}
+                      value={studentResponse.explanation}
+                      onChange={(event) => writeExplanation(question.id, event.target.value)}
+                      aria-describedby={helpId}
+                      placeholder="Write what you remember"
+                      required
+                    />
+                  </div>
+                </section>
+              )
+            })}
 
             {error && <p className="form-error" role="alert">{error}</p>}
 
             <div className="form-actions">
               <button className="primary-button" type="submit" disabled={!canSubmit || submitting}>
-                {submitting ? 'Checking response…' : 'Submit'}
+                {submitting ? 'Checking responses…' : 'Submit quiz'}
               </button>
-
-              <div className="demo-control">
-                <button
-                  className="text-button"
-                  type="button"
-                  aria-expanded={showDemos}
-                  onClick={() => setShowDemos((visible) => !visible)}
-                >
-                  Demo responses
-                  <span aria-hidden="true">{showDemos ? '▲' : '▼'}</span>
-                </button>
-                {showDemos && (
-                  <div className="demo-menu">
-                    {demoResponses.map((demo, index) => (
-                      <button type="button" key={demo.label} onClick={() => applyDemo(index)}>
-                        <strong>{demo.label}</strong>
-                        <span>{demo.description}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <span className="completion-note">Answer and explain all 7 questions</span>
             </div>
           </form>
-        ) : result ? (
+        ) : (
           <section className="results" aria-labelledby="results-title">
             <div className="result-heading">
-              <p className="eyebrow">Response submitted</p>
-              <h1 id="results-title">Here’s what your response shows</h1>
-              <p>Your selected answer and your explanation are considered separately.</p>
+              <p className="eyebrow">Quiz submitted</p>
+              <h1 id="results-title">Here’s what your responses show</h1>
+              <p>
+                {results.filter(({ evaluation }) => evaluation.answerCorrect).length} of 7 answers correct ·{' '}
+                {results.filter(({ evaluation }) => evaluation.comprehension === 'strong').length} strong explanations
+              </p>
             </div>
 
-            <div className="result-comparison" aria-label="Response results">
-              <div className="result-item">
-                <span className="result-label">Multiple-choice answer</span>
-                <strong className={result.answerCorrect ? 'status-correct' : 'status-incorrect'}>
-                  <span className="status-icon" aria-hidden="true">{result.answerCorrect ? '✓' : '×'}</span>
-                  {result.answerCorrect ? 'Correct' : 'Incorrect'}
-                </strong>
-              </div>
-              <div className="result-item result-item--emphasis">
-                <span className="result-label">Understanding shown</span>
-                <strong className={`status-${result.comprehension}`}>
-                  <span className="status-icon" aria-hidden="true">{result.comprehension === 'strong' ? '✓' : '—'}</span>
-                  {result.comprehension[0].toUpperCase() + result.comprehension.slice(1)}
-                </strong>
-              </div>
-            </div>
+            <div className="question-results">
+              {results.map(({ questionId, evaluation }, index) => {
+                const question = quiz.questions.find((item) => item.id === questionId)!
+                const studentResponse = responses[questionId]
+                const selectedChoice = question.choices.find((choice) => choice.id === studentResponse.selectedAnswer)
 
-            <div className="reason-section">
-              <h2>Why</h2>
-              <p>{result.reason}</p>
-            </div>
-
-            <div className="response-review">
-              <h2>Your response</h2>
-              <dl>
-                <div>
-                  <dt>Answer selected</dt>
-                  <dd>{quiz.choices.find((choice) => choice.id === selectedAnswer)?.label}</dd>
-                </div>
-                <div>
-                  <dt>Explanation</dt>
-                  <dd>“{explanation}”</dd>
-                </div>
-              </dl>
+                return (
+                  <article className="question-result" key={questionId}>
+                    <h2><span>{index + 1}.</span> {question.prompt}</h2>
+                    <div className="result-comparison" aria-label={`Results for question ${index + 1}`}>
+                      <div className="result-item">
+                        <span className="result-label">Multiple-choice answer</span>
+                        <strong className={evaluation.answerCorrect ? 'status-correct' : 'status-incorrect'}>
+                          <span className="status-icon" aria-hidden="true">{evaluation.answerCorrect ? '✓' : '×'}</span>
+                          {evaluation.answerCorrect ? 'Correct' : 'Incorrect'}
+                        </strong>
+                      </div>
+                      <div className="result-item result-item--emphasis">
+                        <span className="result-label">Understanding shown</span>
+                        <strong className={`status-${evaluation.comprehension}`}>
+                          <span className="status-icon" aria-hidden="true">{evaluation.comprehension === 'strong' ? '✓' : '—'}</span>
+                          {evaluation.comprehension[0].toUpperCase() + evaluation.comprehension.slice(1)}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="question-result__details">
+                      <p>{evaluation.reason}</p>
+                      <dl>
+                        <div><dt>Answer selected</dt><dd>{selectedChoice?.label}</dd></div>
+                        <div><dt>Your explanation</dt><dd>“{studentResponse.explanation}”</dd></div>
+                      </dl>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
 
             <div className="result-actions">
-              <button className="primary-button" type="button" onClick={startOver}>Try another response</button>
+              <button className="primary-button" type="button" onClick={startOver}>Try the quiz again</button>
               <span className="evaluation-note">
-                {result.source === 'ai' ? 'Explanation reviewed automatically' : 'Using built-in demo evaluation'}
+                {results.some(({ evaluation }) => evaluation.source === 'ai')
+                  ? 'Explanations reviewed automatically'
+                  : 'Using built-in demo evaluation'}
               </span>
             </div>
           </section>
-        ) : null}
+        )}
       </main>
 
       <footer>
