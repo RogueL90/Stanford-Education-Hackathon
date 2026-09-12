@@ -55,6 +55,10 @@ test('correct answer with story evidence is strong', () => {
 test('recognizes evidence for each quiz question', () => {
   const examples = [
     {
+      question: 'What did the Three Little Pigs learn at the end of the story?',
+      explanation: 'The third pig worked hard to build a brick house, so the wolf could not blow it down.',
+    },
+    {
       question: 'What is the moral of Tikki Tikki Tembo?',
       explanation: 'His long name delayed getting help when he fell into the well.',
     },

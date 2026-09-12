@@ -3,10 +3,12 @@ import { quiz, type QuestionId } from './content'
 import type { EvaluationResult, EvaluationSubmission, StudentResult } from './types'
 
 type View = 'signin' | 'quiz' | 'result'
-type ResponseState = Record<QuestionId, string>
+type ResponseState = Record<QuestionId, { selectedAnswer: string; explanation: string }>
 
 function emptyResponses(): ResponseState {
-  return Object.fromEntries(quiz.questions.map((question) => [question.id, ''])) as ResponseState
+  return Object.fromEntries(
+    quiz.questions.map((question) => [question.id, { selectedAnswer: '', explanation: '' }]),
+  ) as ResponseState
 }
 
 function TeacherDashboard() {
@@ -66,6 +68,7 @@ function TeacherDashboard() {
                     <th>Student</th>
                     <th>Result</th>
                     <th>Answer</th>
+                    <th>Explanation</th>
                     <th>Submitted</th>
                   </tr>
                 </thead>
@@ -83,6 +86,7 @@ function TeacherDashboard() {
                         </span>
                       </td>
                       <td>{studentResult.selectedAnswerLabel}</td>
+                      <td className="explanation-cell">{studentResult.explanation || '—'}</td>
                       <td>{new Date(studentResult.createdAt).toLocaleString([], {
                         month: 'short',
                         day: 'numeric',
@@ -110,7 +114,9 @@ function StudentQuiz() {
   const [error, setError] = useState('')
 
   const question = quiz.questions[0]
-  const selectedAnswer = responses[question.id]
+  const studentResponse = responses[question.id]
+  const selectedAnswer = studentResponse.selectedAnswer
+  const explanation = studentResponse.explanation
 
   function continueToQuiz(event: FormEvent) {
     event.preventDefault()
@@ -120,12 +126,22 @@ function StudentQuiz() {
   }
 
   function chooseAnswer(questionId: QuestionId, answerId: string) {
-    setResponses((current) => ({ ...current, [questionId]: answerId }))
+    setResponses((current) => ({
+      ...current,
+      [questionId]: { ...current[questionId], selectedAnswer: answerId },
+    }))
+  }
+
+  function writeExplanation(questionId: QuestionId, value: string) {
+    setResponses((current) => ({
+      ...current,
+      [questionId]: { ...current[questionId], explanation: value },
+    }))
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!selectedAnswer || !studentName) return
+    if (!selectedAnswer || !explanation.trim() || !studentName) return
 
     setSubmitting(true)
     setError('')
@@ -137,7 +153,7 @@ function StudentQuiz() {
       answerChoices: question.choices.map(({ id, label }) => ({ id, label })),
       expectedCorrectAnswer: question.correctAnswerId,
       selectedAnswer,
-      explanation: '',
+      explanation: explanation.trim(),
     }
 
     try {
@@ -227,12 +243,30 @@ function StudentQuiz() {
                   ))}
                 </div>
               </fieldset>
+
+              <div className="explanation-field">
+                <label htmlFor={`${question.id}-explanation`}>Explain your thinking</label>
+                <p id={`${question.id}-explanation-help`}>{question.explanationPrompt}</p>
+                <textarea
+                  id={`${question.id}-explanation`}
+                  rows={4}
+                  value={explanation}
+                  onChange={(event) => writeExplanation(question.id, event.target.value)}
+                  aria-describedby={`${question.id}-explanation-help`}
+                  placeholder="Write what happened in the story"
+                  required
+                />
+              </div>
             </section>
 
             {error && <p className="form-error" role="alert">{error}</p>}
 
             <div className="form-actions">
-              <button className="primary-button" type="submit" disabled={!selectedAnswer || submitting}>
+              <button
+                className="primary-button"
+                type="submit"
+                disabled={!selectedAnswer || !explanation.trim() || submitting}
+              >
                 {submitting ? 'Checking…' : 'Submit answer'}
               </button>
             </div>

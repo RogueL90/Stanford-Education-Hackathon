@@ -25,5 +25,6 @@ export interface StudentResult extends EvaluationResult {
   studentName: string
   selectedAnswer: string
   selectedAnswerLabel: string
+  explanation: string
   createdAt: string
 }

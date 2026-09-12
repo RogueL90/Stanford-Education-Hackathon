@@ -53,6 +53,7 @@ app.post('/api/evaluate', async (request, response) => {
     studentName,
     selectedAnswer: evaluationInput.selectedAnswer,
     selectedAnswerLabel: selectedChoice?.label || evaluationInput.selectedAnswer,
+    explanation: evaluationInput.explanation,
     createdAt: new Date().toISOString(),
     source,
     ...evaluation,

@@ -7,6 +7,7 @@ export interface StoredStudentResult extends Evaluation {
   studentName: string
   selectedAnswer: string
   selectedAnswerLabel: string
+  explanation: string
   createdAt: string
   source: 'ai' | 'demo'
 }

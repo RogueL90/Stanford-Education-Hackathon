@@ -68,6 +68,16 @@ type DemoRubric = {
 
 const demoRubrics: DemoRubric[] = [
   {
+    questionIncludes: 'three little pigs learn',
+    evidenceGroups: [
+      ['brick', 'strong house', 'stronger house'],
+      ['wolf', 'blow down', 'could not blow', "couldn't blow"],
+      ['safe', 'protect', 'protected', 'trouble'],
+      ['hard work', 'worked hard', 'prepare', 'preparation', 'careful', 'took time'],
+    ],
+    strongThreshold: 2,
+  },
+  {
     questionIncludes: 'moral of tikki tikki tembo',
     evidenceGroups: [
       ['long name', 'long names', 'say his name', 'saying his name'],

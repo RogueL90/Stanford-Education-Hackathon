@@ -13,7 +13,7 @@ export const quiz = {
         { id: 'wolves', label: 'Wolves should never be trusted.' },
       ],
       correctAnswerId: 'preparation',
-      explanationPrompt: null,
+      explanationPrompt: 'What happened in the story that supports your answer?',
     },
   ],
 } as const
