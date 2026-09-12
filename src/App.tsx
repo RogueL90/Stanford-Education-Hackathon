@@ -21,7 +21,8 @@ function App() {
 
   const canSubmit = quiz.questions.every((question) => {
     const response = responses[question.id]
-    return response.selectedAnswer !== '' && response.explanation.trim().length > 0
+    const explanationComplete = !question.explanationPrompt || response.explanation.trim().length > 0
+    return response.selectedAnswer !== '' && explanationComplete
   })
 
   function chooseAnswer(questionId: QuestionId, selectedAnswer: string) {
@@ -136,22 +137,24 @@ function App() {
                     </div>
                   </fieldset>
 
-                  <div className="explanation-field">
-                    <label htmlFor={`${question.id}-explanation`}>
-                      Explain your thinking
-                      <span className="required-mark" aria-label="required">*</span>
-                    </label>
-                    <p id={helpId}>{question.explanationPrompt}</p>
-                    <textarea
-                      id={`${question.id}-explanation`}
-                      rows={4}
-                      value={studentResponse.explanation}
-                      onChange={(event) => writeExplanation(question.id, event.target.value)}
-                      aria-describedby={helpId}
-                      placeholder="Write what you remember"
-                      required
-                    />
-                  </div>
+                  {question.explanationPrompt && (
+                    <div className="explanation-field">
+                      <label htmlFor={`${question.id}-explanation`}>
+                        Explain your thinking
+                        <span className="required-mark" aria-label="required">*</span>
+                      </label>
+                      <p id={helpId}>{question.explanationPrompt}</p>
+                      <textarea
+                        id={`${question.id}-explanation`}
+                        rows={4}
+                        value={studentResponse.explanation}
+                        onChange={(event) => writeExplanation(question.id, event.target.value)}
+                        aria-describedby={helpId}
+                        placeholder="Write what you remember"
+                        required
+                      />
+                    </div>
+                  )}
                 </section>
               )
             })}
@@ -162,7 +165,7 @@ function App() {
               <button className="primary-button" type="submit" disabled={!canSubmit || submitting}>
                 {submitting ? 'Checking responses…' : 'Submit quiz'}
               </button>
-              <span className="completion-note">Answer and explain all 7 questions</span>
+              <span className="completion-note">Answer all 7 questions and explain 5</span>
             </div>
           </form>
         ) : (
@@ -172,7 +175,10 @@ function App() {
               <h1 id="results-title">Here’s what your responses show</h1>
               <p>
                 {results.filter(({ evaluation }) => evaluation.answerCorrect).length} of 7 answers correct ·{' '}
-                {results.filter(({ evaluation }) => evaluation.comprehension === 'strong').length} strong explanations
+                {results.filter(({ questionId, evaluation }) =>
+                  quiz.questions.find((question) => question.id === questionId)?.explanationPrompt &&
+                  evaluation.comprehension === 'strong',
+                ).length} strong explanations
               </p>
             </div>
 
@@ -185,7 +191,10 @@ function App() {
                 return (
                   <article className="question-result" key={questionId}>
                     <h2><span>{index + 1}.</span> {question.prompt}</h2>
-                    <div className="result-comparison" aria-label={`Results for question ${index + 1}`}>
+                    <div
+                      className={`result-comparison${question.explanationPrompt ? '' : ' result-comparison--answer-only'}`}
+                      aria-label={`Results for question ${index + 1}`}
+                    >
                       <div className="result-item">
                         <span className="result-label">Multiple-choice answer</span>
                         <strong className={evaluation.answerCorrect ? 'status-correct' : 'status-incorrect'}>
@@ -193,19 +202,23 @@ function App() {
                           {evaluation.answerCorrect ? 'Correct' : 'Incorrect'}
                         </strong>
                       </div>
-                      <div className="result-item result-item--emphasis">
-                        <span className="result-label">Understanding shown</span>
-                        <strong className={`status-${evaluation.comprehension}`}>
-                          <span className="status-icon" aria-hidden="true">{evaluation.comprehension === 'strong' ? '✓' : '—'}</span>
-                          {evaluation.comprehension[0].toUpperCase() + evaluation.comprehension.slice(1)}
-                        </strong>
-                      </div>
+                      {question.explanationPrompt && (
+                        <div className="result-item result-item--emphasis">
+                          <span className="result-label">Understanding shown</span>
+                          <strong className={`status-${evaluation.comprehension}`}>
+                            <span className="status-icon" aria-hidden="true">{evaluation.comprehension === 'strong' ? '✓' : '—'}</span>
+                            {evaluation.comprehension[0].toUpperCase() + evaluation.comprehension.slice(1)}
+                          </strong>
+                        </div>
+                      )}
                     </div>
                     <div className="question-result__details">
-                      <p>{evaluation.reason}</p>
+                      {question.explanationPrompt && <p>{evaluation.reason}</p>}
                       <dl>
                         <div><dt>Answer selected</dt><dd>{selectedChoice?.label}</dd></div>
-                        <div><dt>Your explanation</dt><dd>“{studentResponse.explanation}”</dd></div>
+                        {question.explanationPrompt && (
+                          <div><dt>Your explanation</dt><dd>“{studentResponse.explanation}”</dd></div>
+                        )}
                       </dl>
                     </div>
                   </article>

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluateDemo, type EvaluationRequest } from './evaluate.js'
+import { evaluateDemo, evaluationRequestSchema, type EvaluationRequest } from './evaluate.js'
 
 const base: EvaluationRequest = {
   passage: 'A summary of Tikki Tikki Tembo.',
@@ -83,4 +83,8 @@ test('recognizes evidence for each quiz question', () => {
     const result = evaluateDemo({ ...base, ...example })
     assert.equal(result.comprehension, 'strong', example.question)
   }
+})
+
+test('accepts an empty explanation for direct-recall questions', () => {
+  assert.equal(evaluationRequestSchema.safeParse({ ...base, explanation: '' }).success, true)
 })

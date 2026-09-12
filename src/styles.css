@@ -150,6 +150,7 @@ textarea:focus { border-color: var(--accent); }
 .primary-button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .result-comparison { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #ececef; }
+.result-comparison--answer-only { grid-template-columns: 1fr; }
 .result-item { padding: 30px 42px; }
 .result-item + .result-item { border-left: 1px solid #ececef; }
 .result-item--emphasis { background: #faf9fc; }

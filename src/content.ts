@@ -1,7 +1,7 @@
 export const quiz = {
   title: 'Tikki Tikki Tembo Comprehension Check',
-  instructions: 'Choose the best answer. Then explain what you remember from the story.',
-  referenceText: `In the story, the older brother has a very long honorable name, while Chang's short name means little or nothing. Their mother warns the boys not to play near the well. When each brother falls in, getting help is complicated by the older brother's long name. The Old Man uses his ladder to rescue them. When Chang wakes him, the Old Man has been dreaming that he is floating through purple mist, becoming young again, and seeing glittering gateways and jeweled blossoms. After the accidents, the boys learn that they should have listened to their mother's warning.`,
+  instructions: 'Choose the best answer. When prompted, explain what you remember from the story.',
+  referenceText: `In the story, the older brother has a very long honorable name, while Chang's short name means little or nothing. Chang falls into the well first, and his older brother quickly gets the Old Man with the Ladder to rescue him. Their mother then warns the boys not to play near the well. Later, the older brother falls in. Chang loses time repeating his brother's long name to his mother and to the Old Man, who had been dreaming of floating through purple mist, becoming young again, and seeing glittering gateways and jeweled blossoms. The Old Man uses his ladder for the rescue, but the older brother takes a long time to recover. The accidents show why the boys should have listened to their mother's warning and why such a long name created a dangerous delay.`,
   questions: [
     {
       id: 'moral',
@@ -37,7 +37,7 @@ export const quiz = {
         { id: 'chores', label: '“Did you do your chores?”' },
       ],
       correctAnswerId: 'cannot-hear',
-      explanationPrompt: 'What do you remember about this part of the story?',
+      explanationPrompt: null,
     },
     {
       id: 'old-man',
@@ -61,7 +61,7 @@ export const quiz = {
         { id: 'foolish', label: 'Foolish boy' },
       ],
       correctAnswerId: 'nothing',
-      explanationPrompt: "What do you remember about how the brothers' names were described?",
+      explanationPrompt: null,
     },
     {
       id: 'lesson',

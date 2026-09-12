@@ -7,7 +7,7 @@ export const evaluationRequestSchema = z.object({
   answerChoices: z.array(z.object({ id: z.string(), label: z.string() })).min(2).max(8),
   expectedCorrectAnswer: z.string(),
   selectedAnswer: z.string(),
-  explanation: z.string().min(1).max(5_000),
+  explanation: z.string().max(5_000),
 })
 
 export const evaluationSchema = z.object({

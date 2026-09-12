@@ -2,7 +2,7 @@
 
 A deliberately small hackathon demo showing that multiple-choice correctness and demonstrated reading comprehension are not the same thing.
 
-Students answer seven questions about *Tikki Tikki Tembo* and explain what they remember. Each result reports the selected answer as correct or incorrect and evaluates the explanation separately as strong, partial, or weak.
+Students answer seven questions about *Tikki Tikki Tembo* and explain their thinking on the five questions where reasoning adds value. Each result reports the selected answer as correct or incorrect and evaluates written explanations separately as strong, partial, or weak.
 
 ## Run locally
 
@@ -28,7 +28,7 @@ The Express server serves the built frontend and API together on `PORT` (default
 ## Product scope
 
 - Seven multiple-choice questions
-- One required explanation for each answer
+- Required explanations for five reasoning-focused questions
 - Separate correctness and comprehension results
 - No accounts, database, dashboard, question generation, or gamification
 
