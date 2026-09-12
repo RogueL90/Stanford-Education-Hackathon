@@ -68,5 +68,5 @@ app.get('*path', (_request, response) => {
 })
 
 app.listen(port, host, () => {
-  console.log(`ClearRead is running on http://localhost:${port}`)
+  console.log(`Better MCQ is running on http://localhost:${port}`)
 })

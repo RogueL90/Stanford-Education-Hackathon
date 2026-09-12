@@ -60,7 +60,7 @@ function TeacherDashboard() {
     <div className="app-shell">
       <header className="site-header">
         <div className="site-header__inner site-header__inner--wide">
-          <a className="product-name" href="/">ClearRead</a>
+          <a className="product-name" href="/">Better MCQ</a>
           <span className="header-context">Teacher dashboard</span>
         </div>
       </header>
@@ -251,7 +251,7 @@ function StudentQuiz() {
     <div className="app-shell">
       <header className="site-header">
         <div className="site-header__inner">
-          <span className="product-name">ClearRead</span>
+          <span className="product-name">Better MCQ</span>
           {view !== 'signin' && <span className="header-context">{studentName}</span>}
         </div>
       </header>

@@ -1,4 +1,4 @@
-# ClearRead
+# Better MCQ
 
 A focused hackathon demo showing that multiple-choice correctness and demonstrated reading comprehension are not the same thing.
 
