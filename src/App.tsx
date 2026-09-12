@@ -1,22 +1,123 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { quiz, type QuestionId } from './content'
-import type { EvaluationRequest, EvaluationResult } from './types'
+import type { EvaluationResult, EvaluationSubmission, StudentResult } from './types'
 
-type View = 'quiz' | 'result'
+type View = 'signin' | 'quiz' | 'result'
 type ResponseState = Record<QuestionId, string>
 
 function emptyResponses(): ResponseState {
   return Object.fromEntries(quiz.questions.map((question) => [question.id, ''])) as ResponseState
 }
 
-function App() {
+function TeacherDashboard() {
+  const [results, setResults] = useState<StudentResult[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const loadResults = useCallback(async () => {
+    try {
+      const response = await fetch('/api/results')
+      if (!response.ok) throw new Error('Could not load results')
+      const data = (await response.json()) as { results: StudentResult[] }
+      setResults(data.results)
+      setError('')
+    } catch {
+      setError('Could not load student results.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadResults()
+    const refreshTimer = window.setInterval(() => void loadResults(), 5000)
+    return () => window.clearInterval(refreshTimer)
+  }, [loadResults])
+
+  return (
+    <div className="app-shell">
+      <header className="site-header">
+        <div className="site-header__inner site-header__inner--wide">
+          <a className="product-name" href="/">ClearRead</a>
+          <span className="header-context">Teacher dashboard</span>
+        </div>
+      </header>
+
+      <main className="page page--wide">
+        <section className="results dashboard" aria-labelledby="dashboard-title">
+          <div className="dashboard-heading">
+            <h1 id="dashboard-title">Student results</h1>
+            <button className="secondary-button" type="button" onClick={() => void loadResults()}>
+              Refresh
+            </button>
+          </div>
+
+          {error ? (
+            <p className="dashboard-message" role="alert">{error}</p>
+          ) : loading ? (
+            <p className="dashboard-message">Loading…</p>
+          ) : results.length === 0 ? (
+            <p className="dashboard-message">No responses yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Result</th>
+                    <th>Answer</th>
+                    <th>Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((studentResult) => (
+                    <tr key={studentResult.id}>
+                      <td><strong>{studentResult.studentName}</strong></td>
+                      <td>
+                        <span className={`result-pill result-pill--${studentResult.comprehension}`}>
+                          {studentResult.comprehension === 'strong'
+                            ? 'Understood'
+                            : studentResult.comprehension === 'partial'
+                              ? 'Almost there'
+                              : 'Needs review'}
+                        </span>
+                      </td>
+                      <td>{studentResult.selectedAnswerLabel}</td>
+                      <td>{new Date(studentResult.createdAt).toLocaleString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function StudentQuiz() {
+  const [studentName, setStudentName] = useState('')
   const [responses, setResponses] = useState<ResponseState>(emptyResponses)
-  const [view, setView] = useState<View>('quiz')
+  const [view, setView] = useState<View>('signin')
   const [result, setResult] = useState<EvaluationResult | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const question = quiz.questions[0]
   const selectedAnswer = responses[question.id]
+
+  function continueToQuiz(event: FormEvent) {
+    event.preventDefault()
+    if (!studentName.trim()) return
+    setStudentName(studentName.trim())
+    setView('quiz')
+  }
 
   function chooseAnswer(questionId: QuestionId, answerId: string) {
     setResponses((current) => ({ ...current, [questionId]: answerId }))
@@ -24,11 +125,13 @@ function App() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!selectedAnswer) return
+    if (!selectedAnswer || !studentName) return
 
     setSubmitting(true)
+    setError('')
 
-    const payload: EvaluationRequest = {
+    const payload: EvaluationSubmission = {
+      studentName,
       passage: quiz.referenceText,
       question: question.prompt,
       answerChoices: question.choices.map(({ id, label }) => ({ id, label })),
@@ -48,25 +151,18 @@ function App() {
       setResult((await response.json()) as EvaluationResult)
       setView('result')
     } catch {
-      const answerCorrect = selectedAnswer === question.correctAnswerId
-      setResult({
-        answerCorrect,
-        comprehension: answerCorrect ? 'strong' : 'weak',
-        reason: answerCorrect
-          ? 'You recognized that careful work and preparation kept the pigs safe from the wolf.'
-          : 'The brick house shows that hard work and preparation can protect you from trouble.',
-        source: 'demo',
-      })
-      setView('result')
+      setError('We could not save your answer. Please try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
   function startOver() {
+    setStudentName('')
     setResponses(emptyResponses())
     setResult(null)
-    setView('quiz')
+    setError('')
+    setView('signin')
   }
 
   return (
@@ -74,11 +170,39 @@ function App() {
       <header className="site-header">
         <div className="site-header__inner">
           <span className="product-name">ClearRead</span>
+          {view !== 'signin' && <span className="header-context">{studentName}</span>}
         </div>
       </header>
 
       <main className="page">
-        {view === 'quiz' ? (
+        {view === 'signin' && (
+          <form className="assessment" onSubmit={continueToQuiz}>
+            <section className="title-block" aria-labelledby="page-title">
+              <h1 id="page-title">What’s your name?</h1>
+            </section>
+            <div className="form-section name-field">
+              <label htmlFor="student-name">Name</label>
+              <input
+                id="student-name"
+                type="text"
+                value={studentName}
+                onChange={(event) => setStudentName(event.target.value)}
+                maxLength={80}
+                autoComplete="name"
+                autoFocus
+                placeholder="First name and last initial"
+                required
+              />
+            </div>
+            <div className="form-actions">
+              <button className="primary-button" type="submit" disabled={!studentName.trim()}>
+                Continue
+              </button>
+            </div>
+          </form>
+        )}
+
+        {view === 'quiz' && (
           <form className="assessment" onSubmit={submit}>
             <section className="title-block" aria-labelledby="page-title">
               <h1 id="page-title">{quiz.title}</h1>
@@ -105,13 +229,17 @@ function App() {
               </fieldset>
             </section>
 
+            {error && <p className="form-error" role="alert">{error}</p>}
+
             <div className="form-actions">
               <button className="primary-button" type="submit" disabled={!selectedAnswer || submitting}>
                 {submitting ? 'Checking…' : 'Submit answer'}
               </button>
             </div>
           </form>
-        ) : (
+        )}
+
+        {view === 'result' && (
           <section className="results" aria-labelledby="results-title">
             <div className="result-heading">
               <h1 id="results-title">
@@ -128,13 +256,17 @@ function App() {
             </div>
 
             <div className="result-actions">
-              <button className="primary-button" type="button" onClick={startOver}>Try again</button>
+              <button className="primary-button" type="button" onClick={startOver}>Next student</button>
             </div>
           </section>
         )}
       </main>
     </div>
   )
+}
+
+function App() {
+  return window.location.pathname === '/teacher' ? <TeacherDashboard /> : <StudentQuiz />
 }
 
 export default App

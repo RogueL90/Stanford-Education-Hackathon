@@ -10,6 +10,10 @@ export const evaluationRequestSchema = z.object({
   explanation: z.string().max(5_000),
 })
 
+export const evaluationSubmissionSchema = evaluationRequestSchema.extend({
+  studentName: z.string().trim().min(1).max(80),
+})
+
 export const evaluationSchema = z.object({
   answerCorrect: z.boolean(),
   comprehension: z.enum(['strong', 'partial', 'weak']),

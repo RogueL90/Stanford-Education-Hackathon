@@ -1,8 +1,11 @@
 import 'dotenv/config'
 import express from 'express'
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { evaluateDemo, evaluateWithAI, evaluationRequestSchema, usesAI } from './evaluate.js'
+import { evaluateDemo, evaluationSubmissionSchema, evaluateWithAI, usesAI } from './evaluate.js'
+import type { Evaluation } from './evaluate.js'
+import { listResults, saveResult } from './result-store.js'
 
 const app = express()
 const port = Number(process.env.PORT) || 3001
@@ -17,20 +20,45 @@ app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok' })
 })
 
+app.get('/api/results', (_request, response) => {
+  response.json({ results: listResults() })
+})
+
 app.post('/api/evaluate', async (request, response) => {
-  const parsed = evaluationRequestSchema.safeParse(request.body)
+  const parsed = evaluationSubmissionSchema.safeParse(request.body)
   if (!parsed.success) {
-    response.status(400).json({ error: 'Please provide an answer and explanation.' })
+    response.status(400).json({ error: 'Please provide a name and answer.' })
     return
   }
 
+  const { studentName, ...evaluationInput } = parsed.data
+  let evaluation: Evaluation
+  let source: 'ai' | 'demo'
+
   try {
-    const evaluation = await evaluateWithAI(parsed.data)
-    response.json({ ...evaluation, source: usesAI() ? 'ai' : 'demo' })
+    evaluation = await evaluateWithAI(evaluationInput)
+    source = usesAI() ? 'ai' : 'demo'
   } catch (error) {
     console.error('AI evaluation failed; using demo evaluator.', error)
-    response.json({ ...evaluateDemo(parsed.data), source: 'demo' })
+    evaluation = evaluateDemo(evaluationInput)
+    source = 'demo'
   }
+
+  const selectedChoice = evaluationInput.answerChoices.find(
+    (choice) => choice.id === evaluationInput.selectedAnswer,
+  )
+
+  saveResult({
+    id: randomUUID(),
+    studentName,
+    selectedAnswer: evaluationInput.selectedAnswer,
+    selectedAnswerLabel: selectedChoice?.label || evaluationInput.selectedAnswer,
+    createdAt: new Date().toISOString(),
+    source,
+    ...evaluation,
+  })
+
+  response.json({ ...evaluation, source })
 })
 
 app.use(express.static(staticDirectory))

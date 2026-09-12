@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluateDemo, evaluationRequestSchema, type EvaluationRequest } from './evaluate.js'
+import {
+  evaluateDemo,
+  evaluationRequestSchema,
+  evaluationSubmissionSchema,
+  type EvaluationRequest,
+} from './evaluate.js'
 
 const base: EvaluationRequest = {
   passage: 'A summary of Tikki Tikki Tembo.',
@@ -100,4 +105,15 @@ test('uses a multiple-choice answer when no explanation is requested', () => {
 
   assert.equal(result.answerCorrect, true)
   assert.equal(result.comprehension, 'strong')
+})
+
+test('requires a student name when saving a submission', () => {
+  assert.equal(
+    evaluationSubmissionSchema.safeParse({ ...base, studentName: 'Maya R.' }).success,
+    true,
+  )
+  assert.equal(
+    evaluationSubmissionSchema.safeParse({ ...base, studentName: '   ' }).success,
+    false,
+  )
 })

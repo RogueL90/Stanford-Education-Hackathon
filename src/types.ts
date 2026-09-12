@@ -15,3 +15,15 @@ export interface EvaluationRequest {
   selectedAnswer: string
   explanation: string
 }
+
+export interface EvaluationSubmission extends EvaluationRequest {
+  studentName: string
+}
+
+export interface StudentResult extends EvaluationResult {
+  id: string
+  studentName: string
+  selectedAnswer: string
+  selectedAnswerLabel: string
+  createdAt: string
+}
